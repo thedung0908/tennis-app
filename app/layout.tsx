@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { NavBottom } from '@/components/nav-bottom';
+import { TennisBallIcon } from '@/components/tennis-ball-icon';
 import { Toaster } from '@/components/ui/sonner';
 import { isAdmin } from '@/lib/auth';
 import { logout } from '@/actions/auth';
@@ -21,7 +22,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={inter.className}>
         <div className="min-h-screen flex flex-col max-w-2xl mx-auto">
           <header className="sticky top-0 z-40 bg-background border-b px-4 h-14 flex items-center justify-between shrink-0">
-            <span className="font-bold text-lg">🎾 CLB Tennis 123</span>
+            <span className="font-bold text-lg flex items-center gap-1.5">
+              <TennisBallIcon className="h-5 w-5" />
+              CLB Tennis 123
+            </span>
             {admin ? (
               <form action={logout}>
                 <button
