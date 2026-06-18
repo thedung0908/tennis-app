@@ -6,6 +6,19 @@ import type { FinanceRow } from '@/types';
 import { formatMoney, formatShortDateWithDay } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
+const AVATAR_COLORS = [
+  'bg-blue-100 text-blue-700',
+  'bg-violet-100 text-violet-700',
+  'bg-green-100 text-green-700',
+  'bg-orange-100 text-orange-700',
+  'bg-pink-100 text-pink-700',
+  'bg-teal-100 text-teal-700',
+  'bg-amber-100 text-amber-700',
+  'bg-rose-100 text-rose-700',
+  'bg-cyan-100 text-cyan-700',
+  'bg-indigo-100 text-indigo-700',
+];
+
 interface FinanceTableProps {
   rows: FinanceRow[];
 }
@@ -39,20 +52,29 @@ export function FinanceTable({ rows }: FinanceTableProps) {
       </div>
 
       <div className="space-y-1">
-        {rows.map((row) => {
+        {rows.map((row, i) => {
           const isOpen = expanded.has(row.id);
+          const avatarColor = AVATAR_COLORS[i % AVATAR_COLORS.length];
+          const initial = row.name.trim().charAt(0).toUpperCase();
           return (
             <div key={row.id} className="border rounded-lg overflow-hidden">
               <button
                 onClick={() => toggle(row.id)}
                 className={cn(
-                  'w-full flex items-center justify-between px-4 py-3 text-sm',
+                  'w-full flex items-center gap-3 px-4 py-3',
                   'hover:bg-muted/50 transition-colors'
                 )}
               >
-                <span className="font-semibold">{row.name}</span>
-                <div className="flex items-center gap-2">
-                  <span className={cn('font-bold', row.total_money > 0 ? 'text-destructive' : 'text-muted-foreground')}>
+                <span className="text-xs text-muted-foreground w-4 shrink-0 text-right select-none">{i + 1}</span>
+                <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${avatarColor}`}>
+                  {initial}
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="font-semibold text-sm leading-tight">{row.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{row.details.length} trận</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={cn('font-bold text-sm', row.total_money > 0 ? 'text-destructive' : 'text-muted-foreground')}>
                     {formatMoney(row.total_money)}
                   </span>
                   {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
