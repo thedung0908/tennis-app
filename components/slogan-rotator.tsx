@@ -16,7 +16,6 @@ const SLOGANS = [
   'Cà phê có thể đợi, bóng thì không',
   'Hàng xóm chưa dậy, bóng đã căng',
   '5h sáng: nơi các vợt thủ tụ họp',
-  'Thua hôm nay — mai 5h vẫn có mặt',
   'Rẻ hơn cà phê, khỏe hơn rượu, vui hơn họp',
   // Sức khỏe
   'Gym thì tốn tiền. Chạy bộ thì buồn. Tennis lúc 5h sáng: hoàn hảo.',
