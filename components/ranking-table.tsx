@@ -4,6 +4,17 @@ import { useState } from 'react';
 import type { RankingRow, ChartsData, MemberTimeSeries } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { MemberDetailModal } from '@/components/member-detail-modal';
+import { cn } from '@/lib/utils';
+
+function rowBg(i: number, total: number): string {
+  if (total < 3) return '';
+  const topEnd = Math.ceil(total / 3);
+  const botStart = Math.floor((total * 2) / 3);
+  if (i === 0) return 'bg-amber-50';
+  if (i < topEnd) return 'bg-green-50';
+  if (i >= botStart) return 'bg-rose-50';
+  return '';
+}
 
 interface RankingTableProps {
   ranking: RankingRow[];
@@ -38,7 +49,7 @@ export function RankingTable({ ranking, chartsData }: RankingTableProps) {
             {ranking.map((row, i) => (
               <TableRow
                 key={row.id}
-                className="cursor-pointer hover:bg-muted/50"
+                className={cn('cursor-pointer hover:brightness-95', rowBg(i, ranking.length))}
                 onClick={() =>
                   setSelected({ row, series: chartsData.byMember[row.id] ?? [] })
                 }
