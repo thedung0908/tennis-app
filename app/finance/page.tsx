@@ -1,11 +1,10 @@
 import { Suspense } from 'react';
-import { supabase } from '@/lib/supabase';
 import { parsePeriodFromParams, getPeriodDateRange, getPeriodLabel } from '@/lib/periods';
 import { computeFinance, computeSinglesFinance } from '@/lib/calculations';
+import { getCachedMatchesByPeriod, getCachedSinglesByPeriod, getCachedMembers } from '@/lib/queries';
 import { FinanceTable } from '@/components/finance-table';
 import { PeriodSelector } from '@/components/period-selector';
 import { MatchTypeTabs } from '@/components/match-type-tabs';
-import type { Match, SinglesMatch, Member } from '@/types';
 
 interface PageProps {
   searchParams: Promise<Record<string, string>>;
@@ -17,15 +16,11 @@ export default async function FinancePage({ searchParams }: PageProps) {
   const period = parsePeriodFromParams(params);
   const { start, end } = getPeriodDateRange(period);
 
-  const [doublesRes, singlesRes, membersRes] = await Promise.all([
-    supabase.from('matches').select('*').gte('date', start).lte('date', end).order('date'),
-    supabase.from('singles_matches').select('*').gte('date', start).lte('date', end).order('date'),
-    supabase.from('members').select('*').order('name'),
+  const [matches, singlesMatches, members] = await Promise.all([
+    getCachedMatchesByPeriod(start, end),
+    getCachedSinglesByPeriod(start, end),
+    getCachedMembers(),
   ]);
-
-  const matches = (doublesRes.data ?? []) as Match[];
-  const singlesMatches = (singlesRes.data ?? []) as SinglesMatch[];
-  const members = (membersRes.data ?? []) as Member[];
 
   const financeRows = type === 'singles'
     ? computeSinglesFinance(singlesMatches, members)

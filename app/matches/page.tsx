@@ -1,10 +1,9 @@
 import { Suspense } from 'react';
-import { supabase } from '@/lib/supabase';
 import { isAdmin } from '@/lib/auth';
+import { getCachedAllMatches, getCachedAllSingles, getCachedMembers } from '@/lib/queries';
 import { MatchList } from '@/components/match-list';
 import { SinglesMatchList } from '@/components/singles-match-list';
 import { MatchTypeTabs } from '@/components/match-type-tabs';
-import type { Match, SinglesMatch, Member } from '@/types';
 
 interface PageProps {
   searchParams: Promise<Record<string, string>>;
@@ -15,15 +14,12 @@ export default async function MatchesPage({ searchParams }: PageProps) {
   const type = params.type === 'singles' ? 'singles' : 'doubles';
   const admin = await isAdmin();
 
-  const [doublesRes, singlesRes, membersRes] = await Promise.all([
-    supabase.from('matches').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }),
-    supabase.from('singles_matches').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }),
-    supabase.from('members').select('*').order('name'),
+  const [matches, singlesMatches, members] = await Promise.all([
+    getCachedAllMatches(),
+    getCachedAllSingles(),
+    getCachedMembers(),
   ]);
 
-  const matches = (doublesRes.data ?? []) as Match[];
-  const singlesMatches = (singlesRes.data ?? []) as SinglesMatch[];
-  const members = (membersRes.data ?? []) as Member[];
   const memberMap = Object.fromEntries(members.map((m) => [m.id, m.name]));
 
   return (

@@ -1,9 +1,10 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { supabase } from '@/lib/supabase';
 import { requireAdmin } from '@/lib/auth';
 import { isValidScore } from '@/lib/calculations';
+import { TAGS } from '@/lib/queries';
 
 type MatchPayload = {
   date: string;
@@ -44,6 +45,7 @@ export async function createMatch(_: unknown, formData: FormData) {
   const { error } = await supabase.from('matches').insert(payload);
   if (error) return { error: 'Lỗi khi lưu trận đấu: ' + error.message };
 
+  revalidateTag(TAGS.matches);
   revalidatePath('/matches');
   revalidatePath('/ranking');
   revalidatePath('/finance');
@@ -70,6 +72,7 @@ export async function updateMatch(_: unknown, formData: FormData) {
   const { error } = await supabase.from('matches').update(payload).eq('id', id);
   if (error) return { error: 'Lỗi khi cập nhật trận đấu: ' + error.message };
 
+  revalidateTag(TAGS.matches);
   revalidatePath('/matches');
   revalidatePath('/ranking');
   revalidatePath('/finance');
@@ -80,6 +83,7 @@ export async function deleteMatch(id: string) {
   await requireAdmin();
   const { error } = await supabase.from('matches').delete().eq('id', id);
   if (error) throw new Error(error.message);
+  revalidateTag(TAGS.matches);
   revalidatePath('/matches');
   revalidatePath('/ranking');
   revalidatePath('/finance');

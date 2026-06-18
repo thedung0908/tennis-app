@@ -1,25 +1,27 @@
-import { supabase } from '@/lib/supabase';
 import { isAdmin } from '@/lib/auth';
+import { getCachedMembers, getCachedMatchPlayerIds, getCachedSinglesPlayerIds } from '@/lib/queries';
 import { MemberList } from '@/components/member-list';
 import { MemberForm } from '@/components/member-form';
-import type { Member } from '@/types';
 
 export default async function MembersPage() {
   const admin = await isAdmin();
 
-  const membersRes = await supabase.from('members').select('*').order('name');
-  const members = (membersRes.data ?? []) as Member[];
+  const [members, doublesIds, singlesIds] = await Promise.all([
+    getCachedMembers(),
+    getCachedMatchPlayerIds(),
+    getCachedSinglesPlayerIds(),
+  ]);
 
-  const memberIds = members.map((m) => m.id);
+  // Đếm số trận mỗi thành viên tham gia (cả đôi lẫn đơn) — tính client-side thay vì N query
   const matchCountMap: Record<string, number> = {};
-
-  if (memberIds.length > 0) {
-    for (const id of memberIds) {
-      const { count } = await supabase
-        .from('matches')
-        .select('*', { count: 'exact', head: true })
-        .or(`team1_p1_id.eq.${id},team1_p2_id.eq.${id},team2_p1_id.eq.${id},team2_p2_id.eq.${id}`);
-      matchCountMap[id] = count ?? 0;
+  for (const m of doublesIds) {
+    for (const id of [m.team1_p1_id, m.team1_p2_id, m.team2_p1_id, m.team2_p2_id]) {
+      matchCountMap[id] = (matchCountMap[id] ?? 0) + 1;
+    }
+  }
+  for (const m of singlesIds) {
+    for (const id of [m.player1_id, m.player2_id]) {
+      matchCountMap[id] = (matchCountMap[id] ?? 0) + 1;
     }
   }
 

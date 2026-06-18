@@ -1,8 +1,9 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { supabase } from '@/lib/supabase';
 import { requireAdmin } from '@/lib/auth';
+import { TAGS } from '@/lib/queries';
 
 export async function createMember(_: unknown, formData: FormData) {
   await requireAdmin();
@@ -16,6 +17,7 @@ export async function createMember(_: unknown, formData: FormData) {
     return { error: 'Lỗi khi thêm thành viên: ' + error.message };
   }
 
+  revalidateTag(TAGS.members);
   revalidatePath('/members');
   revalidatePath('/matches');
   return { success: true };
@@ -33,6 +35,7 @@ export async function updateMemberName(id: string, name: string): Promise<{ erro
     return { error: 'Lỗi khi cập nhật: ' + error.message };
   }
 
+  revalidateTag(TAGS.members);
   revalidatePath('/members');
   revalidatePath('/matches');
   revalidatePath('/ranking');
@@ -55,5 +58,6 @@ export async function deleteMember(id: string) {
   const { error } = await supabase.from('members').delete().eq('id', id);
   if (error) throw new Error(error.message);
 
+  revalidateTag(TAGS.members);
   revalidatePath('/members');
 }

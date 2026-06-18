@@ -1,9 +1,10 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { supabase } from '@/lib/supabase';
 import { requireAdmin } from '@/lib/auth';
 import { isValidScore } from '@/lib/calculations';
+import { TAGS } from '@/lib/queries';
 
 type SinglesPayload = {
   date: string;
@@ -23,6 +24,7 @@ function validatePayload(p: SinglesPayload): string | null {
 }
 
 function revalidateAll() {
+  revalidateTag(TAGS.singles);
   revalidatePath('/matches');
   revalidatePath('/ranking');
   revalidatePath('/finance');
