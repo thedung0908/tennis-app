@@ -24,6 +24,8 @@ const SLOGANS = [
   'Cú smash của TÀO: đẹp lắm, tiếc là ra ngoài',
   'TÚ cam kết "lần này chắc thắng" — vẫn thua đều',
   'KIÊN đánh hay nhất đội... khi không có ai xem',
+  'HÀ đánh bóng như múa, tiếc là múa ở sân bên',
+  'DŨNG đoa như bắn súng, mỗi tội là súng tịt ngòi',
 ];
 
 export function SloganRotator() {
@@ -34,7 +36,11 @@ export function SloganRotator() {
     const id = setInterval(() => {
       setVisible(false);
       setTimeout(() => {
-        setIndex((i) => (i + 1) % SLOGANS.length);
+        setIndex((i) => {
+          let next = Math.floor(Math.random() * SLOGANS.length);
+          if (SLOGANS.length > 1 && next === i) next = (i + 1) % SLOGANS.length;
+          return next;
+        });
         setVisible(true);
       }, 350);
     }, 4000);
