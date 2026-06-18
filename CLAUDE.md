@@ -18,9 +18,9 @@ Web app quản lý đội tennis chuyên đánh đôi: nhập kết quả trận
 
 ## Quy tắc bất biến (không thay đổi khi implement)
 
-1. **Không lưu điểm hoặc tiền vào database** — tính realtime từ bảng `matches`
-2. **Chỉ đánh đôi** — mỗi trận luôn có đúng 4 người (2 cặp)
-3. **Tỷ số hợp lệ** — chỉ: 6-0, 6-1, 6-2, 6-3, 6-4, 5-5 (không tie-break, không quá 6)
+1. **Không lưu điểm hoặc tiền vào database** — tính realtime từ bảng `matches` và `singles_matches`
+2. **Hỗ trợ cả đôi lẫn đơn** — trận đôi có đúng 4 người (2 cặp, bảng `matches`); trận đơn có đúng 2 người (bảng `singles_matches`). Xếp hạng và tài chính tính riêng từng loại qua tab Đôi/Đơn (`?type=singles`)
+3. **Tỷ số hợp lệ** — chỉ: 6-0, 6-1, 6-2, 6-3, 6-4, 5-5 (không tie-break, không quá 6) — áp dụng cho cả đôi và đơn
 4. **Auth đơn giản** — public xem được tất cả; thao tác ghi (thêm/sửa/xóa trận, thành viên) yêu cầu đăng nhập bằng mật khẩu admin chung (`ADMIN_PASSWORD` trong env var). Session lưu bằng cookie httpOnly, không dùng Supabase Auth.
 5. **Mobile-first** — form nhập liệu phải dùng được tốt trên điện thoại
 
