@@ -16,6 +16,16 @@ export type Match = {
   created_at: string;
 };
 
+export type SinglesMatch = {
+  id: string;
+  date: string;
+  player1_id: string;
+  player2_id: string;
+  score1: number;
+  score2: number;
+  created_at: string;
+};
+
 export type MatchWithNames = Match & {
   team1_p1_name: string;
   team1_p2_name: string;

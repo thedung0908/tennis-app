@@ -12,5 +12,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/matches/:id/edit'],
+  matcher: ['/matches/:id/edit', '/singles/:id/edit'],
 };
