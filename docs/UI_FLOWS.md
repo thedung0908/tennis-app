@@ -2,11 +2,11 @@
 
 ## 1. Navigation
 
-Bottom navigation bar (mobile), 4 tab. Khi đăng nhập admin, hiện badge "Admin" + nút đăng xuất ở header.
+Bottom navigation bar (mobile), 4 tab. Header hiện tên CLB + icon bóng tennis + nút đăng nhập/xuất.
 
 ```
 ┌─────────────────────────────────────┐
-│  CLB Tennis 123       [🔑 Admin ▾]  │  ← chỉ hiện khi là admin
+│  🎾 CLB Tennis 123    [Admin · Đăng xuất]  │  ← chỉ hiện khi là admin
 │              [Nội dung]             │
 │                                     │
 ├──────┬──────────┬──────────┬────────┤
@@ -17,344 +17,218 @@ Bottom navigation bar (mobile), 4 tab. Khi đăng nhập admin, hiện badge "Ad
 ```
 
 - Route mặc định `/` redirect sang `/ranking`
-- Header badge "Admin" khi đăng nhập → dropdown với nút "Đăng xuất"
-- Public user: header không có badge
+- Public user: header hiện link "Đăng nhập Admin" nhỏ
 
 ---
 
-## 2. Trang Đăng nhập (`/login`)
+## 2. Tab Đôi / Đơn (dùng chung cho 3 trang)
 
-### Wireframe
+3 trang Trận đấu, Xếp hạng, Tài chính đều có tab "Đánh đôi / Đánh đơn" ngay dưới tiêu đề:
+
+```
+Trận đấu
+
+[Đánh đôi] [Đánh đơn]   ← tab, border-bottom active
+─────────────────────────
+... nội dung trang ...
+```
+
+- Tab dùng URL query param: `?type=singles` / không có param = doubles
+- `MatchTypeTabs` là Client Component, dùng `useSearchParams` + `usePathname` để build URL, giữ nguyên các params khác (period) khi chuyển tab
+- Bọc trong `<Suspense>` ở page vì `useSearchParams` cần boundary
+
+---
+
+## 3. Hệ thống màu sắc
+
+Màu nhất quán toàn app — **không tự ý thêm màu mới**:
+
+| Màu | Ý nghĩa |
+|---|---|
+| `bg-green-50` / `text-green-700` | Thắng; top 1/3 bảng xếp hạng |
+| `bg-rose-50` / `text-rose-600` | Thua; bottom 1/3 bảng xếp hạng |
+| `bg-amber-50` | **Chỉ** hạng 1 (vàng/champion) |
+| `bg-slate-50` / `text-slate-500` | Hòa (trung lập) + badge "HÒA" |
+
+---
+
+## 4. Trang Đăng nhập (`/login`)
 
 ```
 ┌─────────────────────────────────────┐
-│                                     │
 │       CLB Tennis 123 Admin          │
 │                                     │
 │  Mật khẩu admin                     │
 │  ┌─────────────────────────────┐    │
 │  │ ••••••••             [👁]   │    │
 │  └─────────────────────────────┘    │
-│  ⚠ Mật khẩu không đúng             │  ← chỉ hiện khi sai
-│                                     │
+│  ⚠ Mật khẩu không đúng             │
 │         [Đăng nhập]                 │
-│                                     │
 │    ← Quay lại xem không cần đăng nhập
 └─────────────────────────────────────┘
 ```
 
-### Chi tiết
-
-- Truy cập: link "Đăng nhập" ở footer hoặc `/login` trực tiếp
-- Nếu đã là admin → redirect về `/ranking`
-- Submit: Server Action so sánh password → set cookie → redirect
-- Link "Quay lại" → về trang trước (hoặc `/ranking`)
-
 ---
 
-## 3. Trang Xếp hạng (`/ranking`)
-
-### Wireframe — Toàn trang
+## 5. Trang Xếp hạng (`/ranking?type=doubles|singles`)
 
 ```
 ┌─────────────────────────────────────┐
 │  Xếp hạng                           │
-│  ┌──────────────┐ ┌───────────────┐ │
-│  │ ● Tháng  ○ Quý│ │  Tháng 6 2026│ │
-│  └──────────────┘ └───────────────┘ │
+│  [Đánh đôi] [Đánh đơn]             │  ← tab
+│  [● Tháng ○ Quý] [Tháng 6 2026]    │
+│  Tháng 6/2026                       │
 │                                     │
-│  ── Vinh danh ─────────────────── ← chỉ hiện khi có ≥ 1 trận
-│  ┌───────────────┐ ┌─────────────┐  │
-│  │  🥇           │ │  🥈         │  │
-│  │  HÀ           │ │  CHƯƠNG     │  │
-│  │  TB: 5.60     │ │  TB: 5.17   │  │
-│  │  5 trận       │ │  6 trận     │  │
-│  └───────────────┘ └─────────────┘  │
+│  ┌────────────┐ ┌────────────┐      │  ← chỉ khi ≥ 1 trận
+│  │ 🥇 HÀ     │ │ 🥈 CHƯƠNG  │      │
+│  │ TB: 5.60  │ │ TB: 5.17   │      │
+│  └────────────┘ └────────────┘      │
 │                                     │
-│  ── Bảng xếp hạng ────────────────  │
-│  # │ Tên    │TR│  TB  │Tổng│T│H│X  │
-│  ──┼────────┼──┼──────┼────┼─┼─┼── │
-│  1 │ HÀ   🔗│5 │ 5.60 │ 28 │3│1│1  │ ← click tên → modal
-│  2 │CHƯƠNG🔗│6 │ 5.17 │ 31 │3│0│3  │
-│  3 │ KIÊN 🔗│4 │ 5.00 │ 20 │2│1│1  │
-│  ...                               │
+│  # │Tên  │TR│  TB  │Tổng│T/H/B     │
+│  ──┼─────┼──┼──────┼────┼──────    │
+│  1 │HÀ   │5 │ 5.60 │ 28 │3/1/1    │  ← bg-amber-50
+│  2 │CHƯƠNG│6│ 5.17 │ 31 │3/0/3    │  ← bg-green-50
+│  3 │KIÊN │4 │ 5.00 │ 20 │2/1/1    │  ← bg-green-50
+│  4 │...  │  │      │    │         │  ← bg-white
+│  6 │...  │  │      │    │         │  ← bg-rose-50
 │                                     │
-│  ── Biểu đồ toàn đội ─────────────  │
-│                                     │
-│  [Cột điểm] [Mạng nhện] [Đường TB]  │ ← tabs chuyển biểu đồ
-│                                     │
-│  ┌─────────────────────────────┐    │
-│  │    [Bar Chart / Radar /     │    │
-│  │       Line Chart]           │    │
-│  └─────────────────────────────┘    │
+│  [Cột điểm] [Mạng nhện] [Đường TB] │
 └─────────────────────────────────────┘
 ```
 
-### Chi tiết — Bộ lọc kỳ
-
-- Radio Tháng / Quý + dropdown năm + dropdown tháng (hoặc quý)
-- Mặc định: tháng hiện tại
-- Thay đổi kỳ → cập nhật bảng + vinh danh + tất cả biểu đồ
-
-### Chi tiết — Bảng xếp hạng
-
-- Cột: `#`, `Tên`, `TR` (số trận), `TB` (điểm TB), `Tổng`, `T/H/B`
-- Chỉ hiện thành viên có ≥ 1 trận trong kỳ
-- Tên có underline/highlight nhẹ để báo "có thể click"
-
-### Chi tiết — Khu vực Vinh danh (Podium)
-
-- Chỉ render khi kỳ có ≥ 1 trận
-- 2 thẻ nằm ngang: 🥇 trái (hạng 1), 🥈 phải (hạng 2)
-- Thẻ vàng (hạng 1) to hơn / nổi bật hơn thẻ bạc
-- Mỗi thẻ: emoji cúp + tên + TB điểm + số trận
-
-### Chi tiết — Biểu đồ toàn đội (3 tabs)
-
-| Tab | Loại | Nội dung |
-|---|---|---|
-| **Cột điểm** | Bar chart | 2 nhóm cột mỗi người: TB điểm (màu chính) + Tổng điểm (scale phụ) |
-| **Mạng nhện** | Radar chart | 4 trục: TB điểm, Tổng điểm, Số trận, Tỷ lệ thắng (%). Mỗi người 1 đường |
-| **Đường TB** | Line chart | Trục X = thời gian trong kỳ (ngày với tháng / tháng với quý). Mỗi người 1 đường màu riêng. Trục Y = điểm TB tích lũy |
-
-- **Không có sự khác biệt** giữa public và admin (chỉ đọc)
+- Màu dòng: hạng 1 = amber-50; top 1/3 = green-50; bottom 1/3 = rose-50; giữa = trắng
+- Cột T/H/B = Thắng/Hòa/Bại
+- Click tên → modal chi tiết + biểu đồ cá nhân
+- Tab Đơn dùng `computeSinglesRanking` — bảng xếp hạng riêng, không gộp với đôi
 
 ---
 
-### Wireframe — Modal chi tiết thành viên
+## 6. Trang Trận đấu (`/matches?type=doubles|singles`)
 
-Mở khi click vào tên trong bảng xếp hạng.
+### Card trận (cả đôi lẫn đơn)
 
 ```
-┌─────────────────────────────────────┐
-│  HÀ — Tháng 6/2026          [✕]    │
-│                                     │
-│  ┌──────┐ ┌──────┐ ┌──────┐ ┌────┐ │
-│  │ TB   │ │Tổng  │ │Trận  │ │T/H/B│ │
-│  │ 5.60 │ │  28  │ │  5  │ │3/1/1│ │
-│  └──────┘ └──────┘ └──────┘ └────┘ │
-│                                     │
-│  Tiến triển điểm TB trong kỳ        │
-│  ┌─────────────────────────────┐    │
-│  │   [Line chart — 1 đường]   │    │
-│  │   trục X: ngày thi đấu     │    │
-│  │   trục Y: điểm TB tích lũy │    │
-│  └─────────────────────────────┘    │
-│                                     │
-│  Điểm từng ngày thi đấu             │
-│  ┌─────────────────────────────┐    │
-│  │   [Bar chart — theo ngày]  │    │
-│  │   cột = tổng điểm ngày đó  │    │
-│  └─────────────────────────────┘    │
-│                                     │
-│  Danh sách trận (5 trận)            │
-│  08/06 HÀ+HƯNG 6-3 KIÊN+CHƯƠNG +6 │
-│  12/06 HÀ+TÙNG 5-5 HẢI+DŨNG   +5 │
-│  ...                               │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│ Trận 1                    [HÒA]      │  ← header: số TT + badge nếu hòa
+│ [bg-green] CHƯƠNG + KIÊN         6  │
+│ [bg-rose]  TIẾN + DŨNG            3  │
+│             [✏️ Sửa] [🗑 Xóa]        │  ← chỉ admin
+└──────────────────────────────────────┘
 ```
 
-**Chi tiết modal:**
-- Fetch data khi mở (lazy): ranking stats + time-series của riêng người đó trong kỳ đang xem
-- Line chart: 1 đường duy nhất (người đó), thấy rõ xu hướng tăng/giảm
-- Bar chart: điểm tổng theo từng ngày thi đấu
-- Danh sách trận: ngày + đội + tỷ số + điểm nhận được hôm đó
+- Số thứ tự (Trận 1, Trận 2...) tính lại theo từng ngày
+- Màu nền mỗi dòng: thắng=green-50, thua=rose-50, hòa=slate-50
+- Badge "HÒA" màu slate xuất hiện trong header khi tỷ số 5-5
+- Nhóm theo ngày, header ngày hiện "Thứ 3, 17/06/2026" (có thứ trong tuần)
+
+### Form trận đôi (4 người)
+
+```
+Ngày thi đấu: [18/06/2026]
+Đội 1 — Người 1: [CHƯƠNG ▼]  Đội 1 — Người 2: [KIÊN ▼]
+Tỷ số Đội 1 [6▼]  —  Tỷ số Đội 2 [3▼]
+Đội 2 — Người 1: [TIẾN ▼]  Đội 2 — Người 2: [DŨNG ▼]
+[Lưu trận]
+```
+
+### Form trận đơn (2 người, trang /singles/[id]/edit)
+
+```
+Ngày thi đấu: [18/06/2026]
+Người chơi 1: [CHƯƠNG ▼]
+Điểm người 1 [6▼]  —  Điểm người 2 [3▼]
+Người chơi 2: [TIẾN ▼]
+[Lưu trận]
+```
+
+- Nút [Sửa] → trang `/singles/[id]/edit` cho trận đơn (bảo vệ bởi middleware)
+- Form đơn mở qua Dialog (thêm mới) hoặc trang riêng (sửa)
 
 ---
 
-## 4. Trang Trận đấu (`/matches`)
-
-### Wireframe — Public (chưa đăng nhập)
-
-```
-┌─────────────────────────────────────┐
-│  Trận đấu                           │  ← không có nút [+ Thêm trận]
-│                                     │
-│  ── 18/06/2026 ───────────────────  │
-│  ┌─────────────────────────────┐    │
-│  │ CHƯƠNG + KIÊN  6 - 3  TIẾN + DŨNG│
-│  └─────────────────────────────┘    │  ← không có nút Sửa/Xóa
-│  ┌─────────────────────────────┐    │
-│  │ HÀ + HƯNG  5 - 5  HẢI + TÙNG   │
-│  └─────────────────────────────┘    │
-└─────────────────────────────────────┘
-```
-
-### Wireframe — Admin (đã đăng nhập)
-
-```
-┌─────────────────────────────────────┐
-│  Trận đấu          [+ Thêm trận]    │  ← nút thêm xuất hiện
-│                                     │
-│  ── 18/06/2026 ───────────────────  │
-│  ┌─────────────────────────────┐    │
-│  │ CHƯƠNG + KIÊN  6 - 3  TIẾN + DŨNG│
-│  │                      [Sửa][Xóa]  │  ← nút xuất hiện
-│  └─────────────────────────────┘    │
-└─────────────────────────────────────┘
-```
-
-- Nhóm theo ngày, sắp xếp ngày giảm dần
-- Nút [Sửa] → trang `/matches/[id]/edit` (redirect `/login` nếu public)
-- Nút [Xóa] → dialog xác nhận
-
-### Wireframe — Form thêm/sửa trận (admin only)
-
-```
-┌─────────────────────────────────────┐
-│  Thêm trận mới                      │
-│                                     │
-│  Ngày thi đấu                       │
-│  ┌─────────────────────────────┐    │
-│  │  18/06/2026          [📅]   │    │
-│  └─────────────────────────────┘    │
-│                                     │
-│  Đội 1                              │
-│  ┌──────────────┐ ┌──────────────┐  │
-│  │ CHƯƠNG    ▼  │ │ KIÊN      ▼  │  │
-│  └──────────────┘ └──────────────┘  │
-│                                     │
-│  Tỷ số Đội 1                        │
-│  ┌──────────────────────────────┐   │
-│  │  6                        ▼  │   │
-│  └──────────────────────────────┘   │
-│                                     │
-│  Đội 2                              │
-│  ┌──────────────┐ ┌──────────────┐  │
-│  │ TIẾN      ▼  │ │ DŨNG      ▼  │  │
-│  └──────────────┘ └──────────────┘  │
-│                                     │
-│  Tỷ số Đội 2                        │
-│  ┌──────────────────────────────┐   │
-│  │  3                        ▼  │   │
-│  └──────────────────────────────┘   │
-│                                     │
-│  [Hủy]              [Lưu trận]      │
-└─────────────────────────────────────┘
-```
-
-**Lưu ý UX form:**
-- Dropdown tỷ số chỉ hiện các giá trị hợp lệ (0–6), validate tổ hợp khi submit
-- Dropdown người chơi: loại trừ người đã được chọn ở ô khác
-- Trên mobile: dùng native `<select>` hoặc shadcn `Select`
-
----
-
-## 5. Trang Tài chính (`/finance`)
-
-### Wireframe
+## 7. Trang Tài chính (`/finance?type=doubles|singles`)
 
 ```
 ┌─────────────────────────────────────┐
 │  Tài chính                          │
-│  ┌──────────────┐ ┌───────────────┐ │
-│  │ ● Tháng  ○ Quý│ │  Tháng 6 2026│ │
-│  └──────────────┘ └───────────────┘ │
+│  [Đánh đôi] [Đánh đơn]             │  ← tab
+│  [● Tháng ○ Quý] [Tháng 6 2026]    │
+│  Tháng 6/2026                       │
 │                                     │
-│  Tên        │  Tiền nộp            │
-│  ──────────────────────────────── │
-│  CHƯƠNG     │  70.000đ         [▼] │
-│    18/06 CHƯƠNG+HƯNG vs HÀ+DŨNG 2-6 → 40.000đ
-│    18/06 HÀ+HƯNG vs KIÊN+CHƯƠNG 6-3 → 30.000đ
-│  TIẾN       │  30.000đ         [▼] │
-│  DŨNG       │  30.000đ         [▼] │
-│  HƯNG       │  40.000đ         [▼] │
-│  ...                               │
+│  ℹ Công thức tính tiền nộp quỹ     │
+│  Đội thắng: 0đ · Đội thua: (hiệu   │
+│  số game) × 10.000đ / người         │
+│  Hòa 5-5: tất cả 4 người 10.000đ   │
 │                                     │
-│  Tổng quỹ: 200.000đ               │
+│ [1] [A] CHƯƠNG       2 trận  70.000đ [▼]│
+│   T3·18/06 CHƯƠNG+HƯNG vs HÀ+DŨNG 2-6 → 40.000đ
+│   T3·18/06 HÀ+HƯNG vs KIÊN+CHƯƠNG 6-3 → 30.000đ
+│ [2] [K] KIÊN         3 trận  30.000đ [▼]│
+│ ...                                 │
+│  Tổng quỹ: 200.000đ                │
 └─────────────────────────────────────┘
 ```
 
-- Bộ lọc kỳ giống trang Xếp hạng
-- Mỗi hàng có thể expand → xem chi tiết từng trận
-- Dòng cuối: tổng tiền quỹ của cả đội trong kỳ
-- **Không có sự khác biệt** giữa public và admin (chỉ đọc)
+- Số thứ tự + avatar chữ cái đầu tên với màu sắc xoay vòng (10 màu)
+- Dưới tên: "X trận" (số trận trong kỳ này)
+- Chi tiết ngày hiện dạng "T3·18/06" (thứ viết tắt + ngày/tháng)
+- Tab Đơn dùng `computeSinglesFinance` — quỹ tính riêng
 
 ---
 
-## 6. Trang Thành viên (`/members`)
-
-### Wireframe — Public
+## 8. Trang Thành viên (`/members`)
 
 ```
 ┌─────────────────────────────────────┐
-│  Thành viên                         │
+│  Thành viên (8)                     │
+│  [Form thêm thành viên mới]         │  ← chỉ admin
 │                                     │
-│  ── Danh sách (8) ────────────────  │
-│  CHƯƠNG                             │  ← không có nút xóa
-│  DŨNG                               │
-│  HÀ                                 │
-│  ...                               │
+│  1  [C]  CHƯƠNG              12 trận  [✏️][🗑]  │
+│  2  [K]  KIÊN                 8 trận  [✏️][🗑]  │
+│  3  [T]  TIẾN                 6 trận  [✏️][🗑]  │
+│  ...                                │
 └─────────────────────────────────────┘
 ```
 
-### Wireframe — Admin
-
-```
-┌─────────────────────────────────────┐
-│  Thành viên                         │
-│                                     │
-│  ┌─────────────────────────────┐    │  ← form thêm chỉ hiện với admin
-│  │ Tên thành viên mới          │    │
-│  └─────────────────────────────┘    │
-│  [+ Thêm]                           │
-│                                     │
-│  ── Danh sách (8) ────────────────  │
-│  CHƯƠNG                       [🗑]  │
-│  DŨNG                         [🗑]  │
-│  HÀ                           [🗑]  │
-│  ...                               │
-└─────────────────────────────────────┘
-```
-
-- Form thêm + nút xóa chỉ render khi `isAdmin() === true` (kiểm tra phía server)
-- Nút xóa (🗑): disabled nếu thành viên đã có trận, kèm tooltip "Đã có trận đấu, không thể xóa"
-- Tên hiển thị theo thứ tự alphabet
+- Số thứ tự bên trái
+- Avatar hình tròn với chữ cái đầu, màu xoay vòng 10 màu
+- Dưới tên: "X trận" = tổng trận đôi + đơn (tính từ 2 query song song, đếm client-side)
+- [✏️] Inline edit: tên thành viên → input → Enter/✓ lưu, Esc/✗ hủy
+- [🗑] Disabled + tooltip nếu đã có trận; enabled nếu chưa có
 
 ---
 
-## 7. Luồng Auth — Đăng nhập Admin
+## 9. Loading States
+
+Mỗi trang có `loading.tsx` tương ứng — skeleton UI animate-pulse:
+- `/matches/loading.tsx` — skeleton card trận (2 dòng màu xanh/đỏ nhạt)
+- `/ranking/loading.tsx` — skeleton table rows
+- `/finance/loading.tsx` — skeleton accordion rows
+- `/members/loading.tsx` — skeleton rows với vòng tròn avatar
+
+Skeleton hiện ngay lập tức (<50ms) khi navigate, trong khi server fetch data.
+
+---
+
+## 10. Luồng chính — Nhập trận đơn (admin)
 
 ```
-Public user nhấn link "Đăng nhập" (footer hoặc URL /login)
-  → Trang /login
-  → Nhập mật khẩu → Submit
-    ├── Sai → hiện lỗi "Mật khẩu không đúng", giữ nguyên form
-    └── Đúng → set cookie httpOnly → redirect /ranking
-              → Header hiện badge "Admin"
-```
-
-## 8. Luồng Auth — Đăng xuất
-
-```
-Admin nhấn badge "Admin" ở header → dropdown
-  → Nhấn "Đăng xuất"
-  → Server Action xóa cookie
-  → Redirect /ranking (chế độ public)
-  → Header không còn badge
-```
-
-## 9. Luồng chính — Nhập trận đấu (admin)
-
-```
-Trang /matches (đã đăng nhập admin)
+Trang /matches (admin, tab Đánh đơn)
   → Nhấn [+ Thêm trận]
-  → Form mở (dialog)
+  → Dialog mở (SinglesMatchForm)
   → Chọn ngày (default: hôm nay)
-  → Chọn 4 người (2 cặp)
-  → Chọn tỷ số
+  → Chọn Người chơi 1
+  → Chọn điểm
+  → Chọn Người chơi 2
   → Nhấn [Lưu trận]
     ├── Validation thất bại → lỗi inline, giữ form
-    └── Thành công → insert DB → đóng dialog → danh sách cập nhật
+    └── Thành công → insert singles_matches → đóng dialog → danh sách cập nhật
 ```
 
-## 10. Luồng chính — Xem xếp hạng theo kỳ
-
 ```
-Trang /ranking (mặc định: tháng hiện tại)
-  → Nhấn radio [Quý]
-  → Dropdown đổi sang chọn quý (Q1/Q2/Q3/Q4)
-  → Nhấn dropdown → chọn Q2
-  → Bảng reload với dữ liệu Q2 năm hiện tại
-  → (Tuỳ chọn) đổi năm trong dropdown năm
+Admin muốn sửa 1 trận đơn
+  → Nhấn [✏️ Sửa] trên card trận đơn
+  → Navigate tới /singles/[id]/edit  (middleware chặn nếu chưa login)
+  → Form SinglesMatchForm với defaultValues
+  → Sửa → Lưu → revalidateTag('singles-matches') → redirect về /matches?type=singles
 ```

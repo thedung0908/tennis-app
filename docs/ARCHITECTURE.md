@@ -8,7 +8,8 @@
 | **Language** | TypeScript (strict mode) | |
 | **UI** | shadcn/ui + Tailwind CSS | Không tự viết UI primitives |
 | **Database** | Supabase (PostgreSQL) | Hosted, free tier đủ dùng |
-| **DB Client** | `@supabase/supabase-js` | Gọi trực tiếp từ Server Components |
+| **DB Client** | `@supabase/supabase-js` | Gọi qua `lib/queries.ts` (có cache) từ Server Components |
+| **Caching** | `unstable_cache` (Next.js Data Cache) | Cache DB queries, invalidate bằng `revalidateTag` |
 | **Auth** | Cookie httpOnly tự quản lý | Không dùng Supabase Auth |
 | **Charts** | Recharts (qua shadcn/ui chart) | Bar, Radar, Line chart |
 | **Deployment** | Vercel | Auto-deploy từ GitHub |
@@ -25,151 +26,181 @@ POST /login (Server Action)
   → Nếu đúng: set cookie httpOnly "admin_session=<token>"
               token = SHA-256(ADMIN_PASSWORD + SESSION_SECRET)
   → Redirect về trang trước hoặc /ranking
-
-Mọi Server Action ghi dữ liệu:
-  → Đọc cookie "admin_session"
-  → Kiểm tra token hợp lệ
-  → Nếu không hợp lệ: throw Error("Unauthorized") → client nhận 403
-```
-
-### Đọc trạng thái auth trong Server Components
-
-```typescript
-// lib/auth.ts
-import { cookies } from 'next/headers';
-import { createHash } from 'crypto';
-
-export function isAdmin(): boolean {
-  const token = cookies().get('admin_session')?.value;
-  const expected = createHash('sha256')
-    .update(process.env.ADMIN_PASSWORD! + process.env.SESSION_SECRET!)
-    .digest('hex');
-  return token === expected;
-}
-
-export function requireAdmin() {
-  if (!isAdmin()) throw new Error('Unauthorized');
-}
 ```
 
 ### Middleware bảo vệ route
 
 ```typescript
-// middleware.ts — chặn direct GET đến trang write khi chưa đăng nhập
-// (Trang /login là route duy nhất public không cần check)
-// Các trang view-only (ranking, matches, finance, members) không cần middleware
-// vì chúng chỉ ẩn nút ghi — không block GET
+// middleware.ts — Edge Runtime (không dùng Node.js modules)
+// Chỉ kiểm tra cookie tồn tại; token verification thực sự ở Server Action
+export const config = {
+  matcher: ['/matches/:id/edit', '/singles/:id/edit'],
+};
 ```
 
 ---
 
-## 3. Cấu trúc thư mục
+## 3. Caching Strategy
+
+Tất cả Supabase queries được bọc trong `unstable_cache` tại `lib/queries.ts`:
+
+```typescript
+export const TAGS = {
+  members: 'members',
+  matches: 'matches',
+  singles: 'singles-matches',
+} as const;
+
+// Ví dụ:
+export const getCachedMatchesByPeriod = unstable_cache(
+  async (start: string, end: string): Promise<Match[]> => { /* query */ },
+  ['matches-by-period'],
+  { tags: [TAGS.matches] }
+);
+```
+
+**Quy tắc invalidation** — trong mỗi Server Action sau khi ghi DB:
+
+```typescript
+// Xóa data cache (unstable_cache):
+revalidateTag(TAGS.matches);      // khi thêm/sửa/xóa trận đôi
+revalidateTag(TAGS.singles);      // khi thêm/sửa/xóa trận đơn
+revalidateTag(TAGS.members);      // khi thêm/sửa/xóa thành viên
+
+// Xóa Router cache (client-side):
+revalidatePath('/matches');
+revalidatePath('/ranking');
+revalidatePath('/finance');
+```
+
+**Kết quả**: lần đầu vào trang hit Supabase, các lần sau (cùng params) trả từ Vercel Data Cache ≈ instant.
+
+---
+
+## 4. Cấu trúc thư mục
 
 ```
 tennis-app/
-├── middleware.ts                 # (tùy chọn) redirect /matches/*/edit nếu chưa login
+├── middleware.ts                   # Bảo vệ /matches/*/edit và /singles/*/edit
 ├── app/
-│   ├── layout.tsx                # Root layout (nav + font)
-│   ├── page.tsx                  # Redirect → /ranking
+│   ├── layout.tsx                  # Root layout (nav + TennisBallIcon + font)
+│   ├── page.tsx                    # Redirect → /ranking
+│   ├── icon.svg                    # Favicon (Next.js App Router convention)
 │   ├── login/
-│   │   └── page.tsx              # Trang đăng nhập admin
+│   │   └── page.tsx
 │   ├── ranking/
-│   │   └── page.tsx              # Trang xếp hạng
+│   │   ├── page.tsx                # Đọc ?type=singles|doubles + period params
+│   │   └── loading.tsx             # Skeleton UI
 │   ├── matches/
-│   │   ├── page.tsx              # Danh sách trận (+ nút Thêm nếu admin)
-│   │   └── [id]/
-│   │       └── edit/
-│   │           └── page.tsx      # Sửa trận (admin only)
+│   │   ├── page.tsx                # Đọc ?type=singles|doubles
+│   │   ├── loading.tsx             # Skeleton UI
+│   │   └── [id]/edit/page.tsx      # Sửa trận đôi (admin only)
+│   ├── singles/
+│   │   └── [id]/edit/page.tsx      # Sửa trận đơn (admin only)
 │   ├── finance/
-│   │   └── page.tsx              # Trang tài chính
+│   │   ├── page.tsx                # Đọc ?type=singles|doubles + period params
+│   │   └── loading.tsx             # Skeleton UI
 │   └── members/
-│       └── page.tsx              # Trang thành viên
+│       ├── page.tsx
+│       └── loading.tsx             # Skeleton UI
 │
-├── actions/                      # Next.js Server Actions
-│   ├── auth.ts                   # login(), logout()
-│   ├── matches.ts                # createMatch(), updateMatch(), deleteMatch()
-│   └── members.ts                # createMember(), deleteMember()
+├── actions/                        # Next.js Server Actions ('use server')
+│   ├── auth.ts                     # login(), logout()
+│   ├── matches.ts                  # createMatch(), updateMatch(), deleteMatch()
+│   ├── singles-matches.ts          # createSinglesMatch(), updateSinglesMatch(), deleteSinglesMatch()
+│   └── members.ts                  # createMember(), updateMemberName(), deleteMember()
 │
 ├── components/
-│   ├── ui/                       # shadcn/ui (auto-generated, không chỉnh)
-│   ├── nav-bottom.tsx            # Bottom nav (hiện badge "Admin" nếu đăng nhập)
-│   ├── period-selector.tsx       # Bộ chọn tháng/quý + năm (dùng chung)
-│   ├── ranking-table.tsx         # Bảng xếp hạng
-│   ├── finance-table.tsx         # Bảng tài chính (Client — expand/collapse)
-│   ├── match-list.tsx            # Danh sách trận (nút Sửa/Xóa chỉ render nếu isAdmin)
-│   ├── match-form.tsx            # Form nhập/sửa trận (Client Component)
-│   ├── match-delete-button.tsx   # Nút xóa trận + dialog xác nhận
-│   ├── member-list.tsx           # Danh sách thành viên
-│   ├── member-form.tsx           # Form thêm thành viên (admin only)
-│   ├── login-form.tsx            # Form đăng nhập (Client Component)
-│   ├── ranking-podium.tsx        # Thẻ vinh danh 🥇🥈 (Server Component)
-│   ├── ranking-charts.tsx        # 3 biểu đồ toàn đội: Bar + Radar + Line (Client)
-│   └── member-detail-modal.tsx   # Modal chi tiết + biểu đồ cá nhân (Client)
+│   ├── ui/                         # shadcn/ui (auto-generated, không chỉnh)
+│   ├── nav-bottom.tsx              # Bottom nav 4 tab
+│   ├── tennis-ball-icon.tsx        # SVG icon bóng tennis (dùng trong header)
+│   ├── match-type-tabs.tsx         # Tab "Đánh đôi" / "Đánh đơn" (Client, dùng useSearchParams)
+│   ├── period-selector.tsx         # Bộ chọn tháng/quý + năm (dùng chung)
+│   │
+│   ├── match-list.tsx              # Danh sách trận đôi (màu nền, số thứ tự)
+│   ├── match-form.tsx              # Form nhập/sửa trận đôi (4 người)
+│   ├── match-delete-button.tsx     # Nút xóa trận đôi + dialog xác nhận
+│   │
+│   ├── singles-match-list.tsx      # Danh sách trận đơn (cùng style màu sắc)
+│   ├── singles-match-form.tsx      # Form nhập/sửa trận đơn (2 người)
+│   ├── singles-match-delete-button.tsx
+│   │
+│   ├── ranking-table.tsx           # Bảng xếp hạng (màu nền theo nhóm)
+│   ├── ranking-podium.tsx          # Thẻ vinh danh 🥇🥈
+│   ├── ranking-charts.tsx          # 3 biểu đồ toàn đội (Client)
+│   ├── member-detail-modal.tsx     # Modal chi tiết + biểu đồ cá nhân (Client)
+│   │
+│   ├── finance-table.tsx           # Bảng tài chính expand/collapse (Client, có avatar)
+│   │
+│   ├── member-list.tsx             # Danh sách thành viên (avatar + số trận, inline edit)
+│   ├── member-form.tsx             # Form thêm thành viên
+│   └── login-form.tsx              # Form đăng nhập (Client)
 │
 ├── lib/
-│   ├── supabase.ts               # Supabase client (server-side only)
-│   ├── auth.ts                   # isAdmin(), requireAdmin()
-│   ├── calculations.ts           # Hàm tính điểm, tiền (pure functions)
-│   ├── formatters.ts             # Format tiền VND, ngày DD/MM/YYYY
-│   └── periods.ts                # Tính date range theo tháng/quý
+│   ├── supabase.ts                 # Supabase client (server-side only)
+│   ├── auth.ts                     # isAdmin(), requireAdmin()
+│   ├── queries.ts                  # Cached DB queries (unstable_cache + TAGS)
+│   ├── calculations.ts             # computeRanking, computeFinance, computeChartsData
+│   │                               # computeSinglesRanking, computeSinglesFinance, computeSinglesChartsData
+│   ├── formatters.ts               # formatMoney, formatDate, formatDateWithDay, formatShortDateWithDay
+│   └── periods.ts                  # parsePeriodFromParams, getPeriodDateRange, getPeriodLabel
 │
 ├── types/
-│   └── index.ts                  # Shared TypeScript types
+│   └── index.ts                    # Shared TypeScript types
 │
-└── docs/
+└── supabase/
+    └── migrations/
+        ├── 001_init.sql            # members, matches, sample data
+        └── 002_singles.sql         # singles_matches
 ```
 
 ---
 
-## 4. Phân chia Server / Client Components
+## 5. Phân chia Server / Client Components
 
 | Component | Loại | Lý do |
 |---|---|---|
-| `app/login/page.tsx` | **Server** | Đọc cookie để redirect nếu đã login |
-| `login-form.tsx` | **Client** | Form có state, submit Server Action |
-| `app/ranking/page.tsx` | **Server** | Fetch data + đọc `isAdmin()` để truyền xuống |
-| `app/finance/page.tsx` | **Server** | Như trên |
-| `app/matches/page.tsx` | **Server** | Fetch + kiểm tra admin để hiển thị nút thêm |
+| `app/*/page.tsx` | **Server** | Fetch data, đọc `isAdmin()`, đọc searchParams |
+| `app/*/loading.tsx` | **Server** | Skeleton UI, render khi page đang load |
+| `match-type-tabs.tsx` | **Client** | Dùng `useSearchParams` + `usePathname` |
 | `period-selector.tsx` | **Client** | Người dùng tương tác chọn kỳ |
-| `match-form.tsx` | **Client** | Form có state, validation, submit |
+| `match-form.tsx` | **Client** | Form có state, submit Server Action |
+| `singles-match-form.tsx` | **Client** | Như trên |
 | `match-delete-button.tsx` | **Client** | Dialog xác nhận |
-| `member-form.tsx` | **Client** | Form có state |
+| `singles-match-delete-button.tsx` | **Client** | Như trên |
 | `finance-table.tsx` | **Client** | Expand/collapse từng hàng |
-| `nav-bottom.tsx` | **Client** | Đọc cookie phía client để hiển thị badge Admin |
-| `ranking-podium.tsx` | **Server** | Nhận props từ page, render thuần |
+| `member-list.tsx` | **Client** | Inline edit tên thành viên |
 | `ranking-charts.tsx` | **Client** | Recharts cần browser APIs |
-| `member-detail-modal.tsx` | **Client** | Dialog + fetch time-series khi mở |
+| `member-detail-modal.tsx` | **Client** | Dialog + charts |
+| `ranking-podium.tsx` | **Server** | Nhận props từ page, render thuần |
 
 ---
 
-## 5. Data Flow
+## 6. Data Flow
 
 ```
-Người dùng chọn kỳ (tháng/quý)
-  → period-selector cập nhật URL search params
-  → Server Component đọc params
-  → Gọi Supabase với date range tương ứng
-  → Render bảng kết quả
-```
-
-```
-Admin nhập trận mới
-  → match-form (Client) validate input
-  → Gọi Server Action createMatch()
-  → Server Action: requireAdmin() → insert vào Supabase
-  → revalidatePath('/matches') + revalidatePath('/ranking') + revalidatePath('/finance')
-  → UI tự cập nhật
+Người dùng chọn tab Đôi/Đơn + kỳ (tháng/quý)
+  → URL: /ranking?type=singles&month=6&year=2026
+  → Server Component đọc searchParams
+  → Gọi getCachedXxx() từ lib/queries.ts
+    → Cache hit? → Trả ngay (instant)
+    → Cache miss? → Gọi Supabase → cache kết quả với tag
+  → Tính toán với computeSinglesRanking() / computeRanking()
+  → Render
 ```
 
 ```
-Public user cố submit form ghi
-  → Server Action requireAdmin() throw Error
-  → Client nhận lỗi, hiện toast "Không có quyền thực hiện"
+Admin thêm trận mới
+  → Server Action createMatch() / createSinglesMatch()
+  → insert vào Supabase
+  → revalidateTag(TAGS.matches) / revalidateTag(TAGS.singles)  ← xóa data cache
+  → revalidatePath('/matches') + '/ranking' + '/finance'        ← xóa router cache
+  → UI tự cập nhật với data mới
 ```
 
 ---
 
-## 6. Types chính
+## 7. Types chính
 
 ```typescript
 // types/index.ts
@@ -192,11 +223,14 @@ export type Match = {
   created_at: string;
 };
 
-export type MatchWithNames = Match & {
-  team1_p1_name: string;
-  team1_p2_name: string;
-  team2_p1_name: string;
-  team2_p2_name: string;
+export type SinglesMatch = {
+  id: string;
+  date: string;
+  player1_id: string;
+  player2_id: string;
+  score1: number;
+  score2: number;
+  created_at: string;
 };
 
 export type RankingRow = {
@@ -210,29 +244,33 @@ export type RankingRow = {
   losses: number;
 };
 
+export type FinanceDetailItem = {
+  matchId: string;
+  date: string;
+  description: string;    // đôi: "P1+P2 6-3 P3+P4"; đơn: "P1 6-3 P2"
+  moneyOwed: number;
+};
+
 export type FinanceRow = {
   id: string;
   name: string;
   total_money: number;    // VND
+  details: FinanceDetailItem[];
 };
 
 export type Period =
   | { type: 'month'; month: number; year: number }
   | { type: 'quarter'; quarter: 1 | 2 | 3 | 4; year: number };
 
-export type TimeSeriesPoint = {
-  date: string;                        // "2024-08-10" hoặc "2024-08-01"
-  [memberName: string]: number | string;  // TB tích lũy mỗi người tại điểm này
-};
-
-export type MemberDetailStats = RankingRow & {
-  timeSeries: TimeSeriesPoint[];       // dùng cho line chart cá nhân
+export type ChartsData = {
+  allMembers: TimeSeriesPoint[];
+  byMember: Record<string, MemberTimeSeries[]>;
 };
 ```
 
 ---
 
-## 7. Environment Variables
+## 8. Environment Variables
 
 ```env
 # .env.local
@@ -242,17 +280,16 @@ ADMIN_PASSWORD=<mật-khẩu-admin>
 SESSION_SECRET=<chuỗi-ngẫu-nhiên-dài>
 ```
 
-- `ADMIN_PASSWORD`: mật khẩu admin dùng chung, không bao giờ public
-- `SESSION_SECRET`: chuỗi random dùng để sign token, tạo 1 lần bằng `openssl rand -hex 32`
-- Hai biến `NEXT_PUBLIC_*` an toàn để public vì Supabase RLS chỉ cho phép đọc
+- `SESSION_SECRET`: tạo bằng `openssl rand -hex 32`
 
 ---
 
-## 8. Deployment
+## 9. Deployment
 
 1. Push code lên GitHub
 2. Kết nối repo với Vercel
 3. Thêm 4 env vars vào Vercel dashboard
-4. Deploy tự động mỗi khi push lên `main`
+4. Chạy `supabase/migrations/001_init.sql` và `002_singles.sql` trong Supabase SQL Editor
+5. Deploy tự động mỗi khi push lên `main`
 
-URL production: `https://<project>.vercel.app`
+**Lưu ý**: Vercel free tier có cold start ~1-2s sau thời gian idle. `loading.tsx` skeleton giúp cải thiện perceived performance. Data cache (`unstable_cache`) giúp các navigation lặp lại gần như instant.

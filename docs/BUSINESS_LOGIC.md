@@ -2,7 +2,7 @@
 
 ## 1. Định dạng trận đấu
 
-- **Thể thức**: Đánh đôi (doubles) — luôn 2 vs 2
+- **Thể thức**: Đánh đôi (doubles — 2 vs 2) **hoặc** Đánh đơn (singles — 1 vs 1)
 - **Séc**: 1 séc duy nhất mỗi trận
 - **Kết thúc**: Thắng khi đạt 6 game với cách biệt ≥ 2; hoặc hòa khi 5-5
 - **Không có**: tie-break, advantage, đánh đến 7
@@ -87,10 +87,19 @@ function calcMoney(score1: number, score2: number): {
 Tổng điểm  = Σ điểm các trận trong kỳ
 Số trận    = số trận đã đánh trong kỳ
 TB         = Tổng điểm / Số trận  (làm tròn 2 chữ số thập phân)
-Thắng      = số trận đội mình ghi 6 game
-Hòa        = số trận tỷ số 5-5
-Bại        = Số trận - Thắng - Hòa
+Thắng (T)  = số trận đội/mình ghi 6 game
+Hòa   (H)  = số trận tỷ số 5-5
+Bại   (B)  = Số trận - Thắng - Hòa
 ```
+
+Hiển thị viết tắt: **T/H/B** (Thắng/Hòa/Bại).
+
+### Áp dụng cho đơn
+
+Công thức hoàn toàn giống đôi, chỉ khác:
+- Mỗi "đội" là 1 người duy nhất
+- Người thắng nhận điểm bằng score của mình
+- Người thua nộp tiền = (hiệu số game) × 10.000đ (không chia per-person)
 
 ### Thứ tự xếp hạng
 
