@@ -9,15 +9,20 @@ const SLOGANS = [
   '5h sáng: nơi các vợt thủ tụ họp',
   'Thua hôm nay — mai 5h vẫn có mặt',
   'Rẻ hơn cà phê, khỏe hơn rượu, vui hơn họp',
+  // Sức khỏe
+  'Gym thì tốn tiền. Chạy bộ thì buồn. Tennis lúc 5h sáng: hoàn hảo.',
+  'Mỗi buổi sáng ra sân là 1 tuần không cần bác sĩ',
+  'Đổ mồ hôi lúc 5h sáng — cả ngày ngồi điều hoà không tội lỗi',
+  'Trái tim khoẻ, xương chắc, tinh thần vui — và thua vẫn thua',
   // Tự trào
   'Không ai thắng — chỉ có người thua ít hơn',
-  'Chơi 2 tiếng để tranh luận 4 tiếng về cú đánh đó',
+  'Chơi 2 tiếng mà chỉ nhớ được 1 trận thắng, chắc do tuổi già',
   'Sau 3 trận thua: "Thôi về". Sau 1 trận thắng: "Đánh thêm!"',
-  'Đánh xong về ngủ tiếp, ai mà biết',
   // Hơi tục
   'Vợ hỏi đi đâu 5h sáng: "Ra sân em ơi" — không phải sân nào lạ nha',
-  '5h sáng, quần đùi, vợt cầm tay — người tử tế cả đấy',
-  'Bóng căng, người cũng căng — nhưng vẫn đến',
+  '5h sáng, quần đùi, vợt cầm tay',
+  'Bóng căng, người cũng căng',
+  'Vợ ngủ, mình ra sân, cả nhà đều vui',  
   '5h sáng: chứng minh cái gì đó về bản thân... chưa rõ là gì',
   // Trêu thành viên — thay tên cho đúng CLB
   'CHƯƠNG thua 3 trận liên tiếp — vẫn ra sân đúng giờ nhất đội',
