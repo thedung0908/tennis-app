@@ -33,7 +33,6 @@ const SLOGANS = [
   'Sau 3 trận thua: "Thôi về". Sau 1 trận thắng: "Đánh thêm!"',
   // Hơi tục
   'Vợ hỏi đi đâu 5h sáng: "Ra sân em ơi" — không phải sân nào lạ nha',
-  '5h sáng, quần đùi, vợt cầm tay',
   'Bóng căng, người cũng căng',
   'Vợ ngủ, mình ra sân, cả nhà đều vui',  
   // Trêu thành viên — thay tên cho đúng CLB
