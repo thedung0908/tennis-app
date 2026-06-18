@@ -14,6 +14,10 @@ const SLOGANS = [
   'Mỗi buổi sáng ra sân là 1 tuần không cần bác sĩ',
   'Đổ mồ hôi lúc 5h sáng — cả ngày ngồi điều hoà không tội lỗi',
   'Trái tim khoẻ, xương chắc, tinh thần vui — và thua vẫn thua',
+  // Hô IN/OUT
+  'Hô IN hay OUT tuỳ vào... tỷ số lúc đó',
+  'Bóng ra ngoài 20cm — hô IN tự tin như sấm',
+  'Thắng hay thua không quan trọng, quan trọng là ra sân đúng giờ',
   // Tự trào
   'Không ai thắng — chỉ có người thua ít hơn',
   'Chơi 2 tiếng mà chỉ nhớ được 1 trận thắng, chắc do tuổi già',
@@ -23,7 +27,6 @@ const SLOGANS = [
   '5h sáng, quần đùi, vợt cầm tay',
   'Bóng căng, người cũng căng',
   'Vợ ngủ, mình ra sân, cả nhà đều vui',  
-  '5h sáng: chứng minh cái gì đó về bản thân... chưa rõ là gì',
   // Trêu thành viên — thay tên cho đúng CLB
   'CHƯƠNG thua 3 trận liên tiếp — vẫn ra sân đúng giờ nhất đội',
   'Cú smash của TÀO: đẹp lắm, tiếc là ra ngoài',
