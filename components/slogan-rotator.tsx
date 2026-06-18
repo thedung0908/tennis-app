@@ -41,7 +41,6 @@ const SLOGANS = [
   'TÚ cam kết "lần này chắc thắng" — vẫn thua đều',
   'KIÊN đánh hay nhất đội... khi không có ai xem',
   'HÀ đánh bóng như múa, tiếc là múa ở sân bên',
-  'DŨNG đoa như bắn súng, mỗi tội là súng tịt ngòi',
 ];
 
 export function SloganRotator() {
