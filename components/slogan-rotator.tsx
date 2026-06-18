@@ -1,6 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+function shuffledIndices(length: number): number[] {
+  const arr = Array.from({ length }, (_, i) => i);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 const SLOGANS = [
   // Sáng sớm + hết mình
@@ -39,15 +48,19 @@ const SLOGANS = [
 export function SloganRotator() {
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(true);
+  const queue = useRef<number[]>([]);
 
   useEffect(() => {
+    queue.current = shuffledIndices(SLOGANS.length);
+
     const id = setInterval(() => {
       setVisible(false);
       setTimeout(() => {
-        setIndex((i) => {
-          let next = Math.floor(Math.random() * SLOGANS.length);
-          if (SLOGANS.length > 1 && next === i) next = (i + 1) % SLOGANS.length;
-          return next;
+        setIndex(() => {
+          if (queue.current.length === 0) {
+            queue.current = shuffledIndices(SLOGANS.length);
+          }
+          return queue.current.shift()!;
         });
         setVisible(true);
       }, 350);
